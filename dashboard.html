@@ -1,0 +1,172 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Staff Control Panel - Express Logistics Services</title>  
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <style>  
+        :root { --primary: #0f172a; --accent: #2563eb; --light: #f8fafc; --border: #e2e8f0; }  
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }  
+        body { background: #f1f5f9; color: #334155; padding: 20px; }  
+        .wrapper { max-width: 900px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }  
+        h2 { color: var(--primary); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }  
+        .form-group { margin-bottom: 15px; }  
+        label { display: block; font-weight: 600; margin-bottom: 5px; }  
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; }  
+        button { background: var(--accent); color: #fff; border: none; padding: 10px 20px; font-weight: 600; border-radius: 4px; cursor: pointer; }  
+        button:hover { background: #1d4ed8; }  
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }  
+        th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 0.95rem; }  
+        th { background: var(--light); color: var(--primary); }  
+        .login-screen { max-width: 400px; margin: 100px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }  
+    </style>  
+</head>  
+<body>  
+  
+    <!-- Simple PIN Guard Screen -->  
+    <div id="loginScreen" class="login-screen">  
+        <h2><i class="fa fa-lock"></i> Staff Login</h2>  
+        <p style="margin-bottom: 15px; font-size: 0.9rem; color: #64748b;">Enter team access code to manage database.</p>  
+        <input type="password" id="pinInput" placeholder="Enter PIN (default: 1234)" style="margin-bottom: 15px; text-align: center;">  
+        <button onclick="verifyPin()" style="width: 100%;">Access Dashboard</button>  
+    </div>  
+  
+    <!-- Main Dashboard Panel -->  
+    <div id="dashPanel" class="wrapper" style="display: none;">  
+        <h2>  
+            <span><i class="fa fa-tasks"></i> Shipment Control Desk</span>  
+            <a href="index.html" style="font-size: 0.9rem; color: var(--accent); text-decoration: none;"><i class="fa fa-home"></i> Back to Website</a>  
+        </h2>  
+          
+        <div style="background: var(--light); padding: 20px; border-radius: 6px; margin-bottom: 30px;">  
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--primary);">Add / Update Tracking Record</h3>  
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">  
+                <div class="form-group">  
+                    <label>Tracking ID</label>  
+                    <input type="text" id="tId" placeholder="e.g. ELS-9921">  
+                </div>  
+                <div class="form-group">  
+                    <label>Receiver Name</label>  
+                    <input type="text" id="tRecipient" placeholder="Jane Doe">  
+                </div>  
+                <div class="form-group">  
+                    <label>Destination City/Country</label>  
+                    <input type="text" id="tDest" placeholder="London, UK">  
+                </div>  
+                <div class="form-group">  
+                    <label>Current Status</label>  
+                    <select id="tStatus">  
+                        <option value="Order Processed / Info Received">Order Processed</option>  
+                        <option value="In Transit - Hub Facility">In Transit (Hub Facility)</option>  
+                        <option value="Out for Delivery">Out for Delivery</option>  
+                        <option value="Successfully Delivered">Successfully Delivered</option>  
+                    </select>  
+                </div>  
+            </div>  
+            <div class="form-group" style="margin-top: 15px;">  
+                <label>Current Hub / Location Detail</label>  
+                <input type="text" id="tLoc" placeholder="New York Sorting Center, NY">  
+            </div>  
+            <button onclick="saveShipment()" style="margin-top: 10px;"><i class="fa fa-save"></i> Save & Publish Status</button>  
+        </div>  
+  
+        <h3 style="margin-bottom: 10px; font-size: 1.1rem; color: var(--primary);">Active Shipments Directory</h3>  
+        <table>  
+            <thead>  
+                <tr>  
+                    <th>Tracking ID</th>  
+                    <th>Receiver</th>  
+                    <th>Destination</th>  
+                    <th>Status</th>  
+                    <th>Action</th>  
+                </tr>  
+            </thead>  
+            <tbody id="shipmentTableBody">  
+                <!-- Dynamically populated rows -->  
+            </tbody>  
+        </table>  
+    </div>  
+  
+    <script>  
+        function verifyPin() {  
+            const pin = document.getElementById('pinInput').value;  
+            if(pin === '1234') { // You can alter this PIN code freely  
+                document.getElementById('loginScreen').style.display = 'none';  
+                document.getElementById('dashPanel').style.display = 'block';  
+                loadShipments();  
+            } else {  
+                alert('Invalid security PIN code.');  
+            }  
+        }  
+  
+        function getShipments() {  
+            return JSON.parse(localStorage.getItem('els_shipments') || '[]');  
+        }  
+  
+        function saveShipment() {  
+            const trackingId = document.getElementById('tId').value.trim();  
+            const recipient = document.getElementById('tRecipient').value.trim();  
+            const destination = document.getElementById('tDest').value.trim();  
+            const status = document.getElementById('tStatus').value;  
+            const location = document.getElementById('tLoc').value.trim();  
+  
+            if(!trackingId || !recipient) {  
+                alert('Tracking ID and Receiver name are required fields.');  
+                return;  
+            }  
+  
+            let shipments = getShipments();  
+            const index = shipments.findIndex(s => s.trackingId.toLowerCase() === trackingId.toLowerCase());  
+              
+            const entry = { trackingId, recipient, destination, status, location };  
+            if(index >= 0) {  
+                shipments[index] = entry; // Update existing record  
+            } else {  
+                shipments.push(entry); // Add new record  
+            }  
+  
+            localStorage.setItem('els_shipments', JSON.stringify(shipments));  
+            alert('Shipment database updated successfully!');  
+            loadShipments();  
+              
+            // Reset fields  
+            document.getElementById('tId').value = '';  
+            document.getElementById('tRecipient').value = '';  
+            document.getElementById('tDest').value = '';  
+            document.getElementById('tLoc').value = '';  
+        }  
+  
+        function loadShipments() {  
+            const shipments = getShipments();  
+            const tbody = document.getElementById('shipmentTableBody');  
+            tbody.innerHTML = '';  
+  
+            if(shipments.length === 0) {  
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b;">No shipments logged currently.</td></tr>`;  
+                return;  
+            }  
+  
+            shipments.forEach((s, idx) => {  
+                tbody.innerHTML += `  
+                    <tr>  
+                        <td><strong>${s.trackingId}</strong></td>  
+                        <td>${s.recipient}</td>  
+                        <td>${s.destination}</td>  
+                        <td><span style="color: #2563eb;">${s.status}</span></td>  
+                        <td><button onclick="deleteShipment(${idx})" style="background: #dc2626; padding: 5px 10px; font-size: 0.8rem;"><i class="fa fa-trash"></i></button></td>  
+                    </tr>  
+                `;  
+            });  
+        }  
+  
+        function deleteShipment(index) {  
+            let shipments = getShipments();  
+            shipments.splice(index, 1);  
+            localStorage.setItem('els_shipments', JSON.stringify(shipments));  
+            loadShipments();  
+        }  
+    </script>  
+</body>  
+</html>  
